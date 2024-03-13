@@ -6,9 +6,9 @@ using UnityEngine;
 public class MultiplayerManager : ColyseusManager<MultiplayerManager>
 {
     private ColyseusRoom<State> room;
-    [SerializeField] private GameObject playerPrefab;
-    [SerializeField] private GameObject enemyPrefab;
-    private Dictionary<string, GameObject> activePlayers = new Dictionary<string, GameObject>();
+    [SerializeField] private PlayerCharacter playerPrefab;
+    [SerializeField] private EnemyController enemyPrefab;
+    private Dictionary<string, EnemyController> enemies = new Dictionary<string, EnemyController>();
 
     protected override void Awake()
     {
@@ -20,10 +20,17 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
 
     private bool IsMyPlayer(string sessionId) => string.Equals(sessionId, room.SessionId);
 
+    public string GetClientKey => room.SessionId;
+
     private async void Connect()
     {
+        Dictionary<string, object> joinParams = new Dictionary<string, object>()
+        {
+            { "speed", playerPrefab.Speed }
+        };
+
         string roomName = R.ServerCredits.RoomName;
-        room = await Instance.client.JoinOrCreate<State>(roomName);
+        room = await Instance.client.JoinOrCreate<State>(roomName, joinParams);
 
         Subscribe();
     }
@@ -31,6 +38,14 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
     private void Subscribe()
     {
         room.OnStateChange += OnRoomStateChangeHandler;
+        room.OnMessage<string>(R.FromServerEvents.Shoot, OnShootHandler);
+    }
+
+    private void OnShootHandler(string jsonShootInfo)
+    {
+        ShootInfo shootInfo = JsonUtility.FromJson<ShootInfo>(jsonShootInfo);
+        string key = shootInfo.key;
+        if (enemies.TryGetValue(key, out EnemyController enemy)) enemy.Shoot(shootInfo);
     }
 
     private void Unsubscribe()
@@ -43,33 +58,32 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
         if (isFirstState)
         {
             state.players.ForEach(CreatePlayer);
-
             state.players.OnAdd += CreatePlayer;
-            state.players.OnRemove += DestroyPlayer;
+            state.players.OnRemove += RemovePlayer;
+            room.OnStateChange -= OnRoomStateChangeHandler;
         }
     }
 
-    private void DestroyPlayer(string key, Player player)
+    private void RemovePlayer(string key, Player player)
     {
-        if (activePlayers.ContainsKey(key))
-        {
-            GameObject neededObject = activePlayers[key];
-            player.OnChange -= neededObject.GetComponent<EnemyController>().OnChangeHandler;
-            activePlayers.Remove(key);
-            Destroy(neededObject);
-        }
+        if (enemies.ContainsKey(key)) enemies.Remove(key);
     }
 
     private void CreatePlayer(string key, Player player)
     {
-        GameObject prefab = IsMyPlayer(key) ? playerPrefab : enemyPrefab;
         Vector3 position = new Vector3(player.pX, player.pY, player.pZ);
         Quaternion rotation = Quaternion.identity;
-        GameObject newPlayer = Instantiate(prefab, position, rotation);
 
-        activePlayers.Add(key, newPlayer);
-
-        if (!IsMyPlayer(key)) player.OnChange += newPlayer.GetComponent<EnemyController>().OnChangeHandler;
+        if (IsMyPlayer(key))
+        {
+            PlayerCharacter newPlayer = Instantiate(playerPrefab, position, rotation);
+        }
+        else
+        {
+            EnemyController newPlayer = Instantiate(enemyPrefab, position, rotation);
+            newPlayer.Init(player);
+            enemies.Add(key, newPlayer);
+        }
     }
 
     protected override void OnDestroy()
@@ -84,6 +98,11 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
     }
 
     public void SendMessage(string message, Dictionary<string, object> data)
+    {
+        room.Send(message, data);
+    }
+
+    public void SendMessage(string message, string data)
     {
         room.Send(message, data);
     }
