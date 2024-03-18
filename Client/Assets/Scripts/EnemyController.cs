@@ -31,10 +31,13 @@ public class EnemyController : MonoBehaviour
     }
 
 
-    public void Init(Player player)
+    public void Init(string sessionId, Player player)
     {
         this.player = player;
+        enemyCharacter.Init(sessionId);
         enemyCharacter.SetSpeed(player.speed);
+        enemyCharacter.SetMaxHealth(player.maxHP);
+
         this.player.OnChange += OnPlayerChangeHandler;
         this.player.OnRemove += OnPlayerRemoveHandler;
     }
@@ -73,6 +76,13 @@ public class EnemyController : MonoBehaviour
         {
             switch (dataChange.Field)
             {
+                case "loss":
+                    MultiplayerManager.Instance.lossCounterUi.SetEnemyLoss((sbyte)dataChange.Value);
+                    break;
+                case "currentHP":
+                    if ((sbyte)dataChange.Value > (sbyte)dataChange.PreviousValue)
+                        enemyCharacter.RestoreHP((sbyte)dataChange.Value);
+                    break;
                 case "pX":
                     position.x = (float)dataChange.Value;
                     break;

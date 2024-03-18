@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Colyseus;
 using generated;
+using UI;
 using UnityEngine;
 
 public class MultiplayerManager : ColyseusManager<MultiplayerManager>
@@ -8,6 +9,7 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
     private ColyseusRoom<State> room;
     [SerializeField] private PlayerCharacter playerPrefab;
     [SerializeField] private EnemyController enemyPrefab;
+    [field: SerializeField] public LossCounterUi lossCounterUi { get; set; }
     private Dictionary<string, EnemyController> enemies = new Dictionary<string, EnemyController>();
 
     protected override void Awake()
@@ -26,7 +28,8 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
     {
         Dictionary<string, object> joinParams = new Dictionary<string, object>()
         {
-            { "speed", playerPrefab.Speed }
+            { "speed", playerPrefab.Speed },
+            { "hp", playerPrefab.MaxHealth },
         };
 
         string roomName = R.ServerCredits.RoomName;
@@ -76,12 +79,15 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
 
         if (IsMyPlayer(key))
         {
+            string message = R.FromServerEvents.Restart;
             PlayerCharacter newPlayer = Instantiate(playerPrefab, position, rotation);
+            player.OnChange += newPlayer.OnChange;
+            room.OnMessage<string>(message, newPlayer.GetComponent<PlayerController>().OnPlayerRestartHandler);
         }
         else
         {
             EnemyController newPlayer = Instantiate(enemyPrefab, position, rotation);
-            newPlayer.Init(player);
+            newPlayer.Init(key, player);
             enemies.Add(key, newPlayer);
         }
     }

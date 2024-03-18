@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Colyseus.Schema;
 using UnityEngine;
 
 public class PlayerCharacter : Character
@@ -9,6 +11,7 @@ public class PlayerCharacter : Character
     [SerializeField] private Transform cameraPoint;
     [SerializeField] private float jumpForce = 5f;
     [SerializeField] private CheckFly checkFly;
+    [SerializeField] private Health health;
 
     private float inputH = 0f;
     private float inputV = 0f;
@@ -22,6 +25,8 @@ public class PlayerCharacter : Character
         Transform camera = Camera.main.transform;
         camera.SetParent(cameraPoint);
         camera.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+        health.SetMax(MaxHealth);
     }
 
     private void FixedUpdate()
@@ -72,5 +77,23 @@ public class PlayerCharacter : Character
 
         jumpTime = Time.time;
         rigidbody.AddForce(0f, jumpForce, 0f, ForceMode.VelocityChange);
+    }
+
+    public void OnChange(List<DataChange> changes)
+    {
+        foreach (DataChange dataChange in changes)
+        {
+            switch (dataChange.Field)
+            {
+                case "loss":
+                    MultiplayerManager.Instance.lossCounterUi.SetPlayerLoss((sbyte)dataChange.Value);
+                    break;
+                case "currentHP":
+                    health.SetCurrent((sbyte)dataChange.Value);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 }

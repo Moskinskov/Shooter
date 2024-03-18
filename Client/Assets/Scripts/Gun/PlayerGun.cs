@@ -5,6 +5,7 @@ namespace Gun
 {
     public class PlayerGun : Gun
     {
+        [SerializeField] private int damage = 1;
         [SerializeField] private Transform bulletPoint;
         [SerializeField] private float bulletSpeed;
 
@@ -24,7 +25,7 @@ namespace Gun
             Vector3 direction = bulletPoint.forward * bulletSpeed;
 
             Bullet bullet = Instantiate(bulletPrefab, position, bulletPoint.rotation);
-            bullet.Init(direction);
+            bullet.Init(direction, damage);
 
             OnShoot?.Invoke();
 
