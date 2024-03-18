@@ -2,6 +2,15 @@ import { Room, Client } from "colyseus";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
 export class Player extends Schema {
+    @type("int8")
+    loss = 0;
+    
+    @type("int8")
+    maxHP = 0;
+    
+    @type("int8")
+    currentHP = 0;
+
     @type("number")
     speed = 0;
 
@@ -40,6 +49,8 @@ export class State extends Schema {
 
         const player = new Player();
         player.speed = data.speed;
+        player.maxHP = data.hp;
+        player.currentHP = data.hp;
 
         this.players.set(sessionId, player);
 
@@ -63,7 +74,7 @@ export class State extends Schema {
 }
 
 export class StateHandlerRoom extends Room<State> {
-    maxClients = 4;
+    maxClients = 2;
 
     onCreate (options) {
         console.log("StateHandlerRoom created!", options);
@@ -80,6 +91,31 @@ export class StateHandlerRoom extends Room<State> {
             this.broadcast("Shoot", data, { except: client });
 
         })
+
+        this.onMessage("damage", (client, data) => {
+            const sessionId = data.id;
+            const player = this.state.players.get(sessionId);
+            const newHp = player.currentHP - data.value;
+
+            if(newHp > 0){
+                player.currentHP = newHp;
+                return;
+            }
+            else{
+                player.loss++;
+                player.currentHP = player.maxHP;
+
+                for(var i=0; i < this.clients.length; i++){
+                    if(this.clients[i].id != sessionId) continue;
+
+                    const x =  Math.random() * 10;
+                    const z =  Math.random() * 10;
+
+                    const message = JSON.stringify({x, z});
+                    this.clients[i].send("restart", message);
+                }
+            }
+        })
     }
 
     onAuth(client, options, req) {
@@ -87,6 +123,8 @@ export class StateHandlerRoom extends Room<State> {
     }
 
     onJoin (client: Client, data: any) {
+        if(this.clients.length > 1) this.lock;
+
         client.send("hello", "world");
         this.state.createPlayer(client.sessionId, data);
     }

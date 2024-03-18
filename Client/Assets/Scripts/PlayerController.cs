@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Gun;
 using UnityEngine;
@@ -9,8 +10,13 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float mouseSensetivity = 2f;
     [SerializeField] private PlayerGun gun;
 
+    private float restartDelay = 3f;
+    private bool hold = false;
+
     private void Update()
     {
+        if (hold) return;
+
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
 
@@ -59,6 +65,41 @@ public class PlayerController : MonoBehaviour
 
         MultiplayerManager.Instance.SendMessage(message, data);
     }
+
+    private void SendMoveForRestart(RestartInfo restartInfo)
+    {
+        string message = R.ToServerEvents.Move;
+        Dictionary<string, object> data = new Dictionary<string, object>()
+        {
+            { "pX", restartInfo.x },
+            { "pY", 0 },
+            { "pZ", restartInfo.z },
+            { "vX", 0 },
+            { "vY", 0 },
+            { "vZ", 0 },
+            { "rX", 0 },
+            { "rY", 0 },
+        };
+
+        MultiplayerManager.Instance.SendMessage(message, data);
+    }
+
+    public void OnPlayerRestartHandler(string json)
+    {
+        IEnumerator waiting()
+        {
+            hold = true;
+            yield return new WaitForSeconds(restartDelay);
+            hold = false;
+        }
+
+        StartCoroutine(waiting());
+
+        RestartInfo restartInfo = JsonUtility.FromJson<RestartInfo>(json);
+        playerCharacter.transform.position = new Vector3(restartInfo.x, 0, restartInfo.z);
+        playerCharacter.SetInput(0, 0, 0);
+        SendMoveForRestart(restartInfo);
+    }
 }
 
 [Serializable]
@@ -71,4 +112,11 @@ public struct ShootInfo
     public float dX;
     public float dY;
     public float dZ;
+}
+
+[Serializable]
+public struct RestartInfo
+{
+    public float x;
+    public float z;
 }
