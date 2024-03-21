@@ -52,6 +52,12 @@ export class State extends Schema {
         player.maxHP = data.hp;
         player.currentHP = data.hp;
 
+        player.pX = data.pX;
+        player.pY = data.pY;
+        player.pZ = data.pZ;
+
+        player.rY = data.rY;
+
         this.players.set(sessionId, player);
 
     }
@@ -75,9 +81,12 @@ export class State extends Schema {
 
 export class StateHandlerRoom extends Room<State> {
     maxClients = 2;
+    spawnPointsCount = 1;
 
     onCreate (options) {
         console.log("StateHandlerRoom created!", options);
+
+        this.spawnPointsCount = options.points;
 
         this.setState(new State());
 
@@ -108,11 +117,9 @@ export class StateHandlerRoom extends Room<State> {
                 for(var i=0; i < this.clients.length; i++){
                     if(this.clients[i].id != sessionId) continue;
 
-                    const x =  Math.random() * 10;
-                    const z =  Math.random() * 10;
+                    const point = Math.floor(Math.random() * this.spawnPointsCount);
 
-                    const message = JSON.stringify({x, z});
-                    this.clients[i].send("restart", message);
+                    this.clients[i].send("restart", point);
                 }
             }
         })

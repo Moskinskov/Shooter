@@ -12,10 +12,25 @@ public class PlayerController : MonoBehaviour
 
     private float restartDelay = 3f;
     private bool hold = false;
+    private bool hideCursor = false;
+
+    private void Start()
+    {
+        hideCursor = true;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            hideCursor = !hideCursor;
+            Cursor.lockState = hideCursor ? CursorLockMode.Locked : CursorLockMode.None;
+        }
+
         if (hold) return;
+
+        if (hideCursor == false) return;
 
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
@@ -66,25 +81,25 @@ public class PlayerController : MonoBehaviour
         MultiplayerManager.Instance.SendMessage(message, data);
     }
 
-    private void SendMoveForRestart(RestartInfo restartInfo)
+    private void SendMoveForRestart(Vector3 position, Vector3 rotation)
     {
         string message = R.ToServerEvents.Move;
         Dictionary<string, object> data = new Dictionary<string, object>()
         {
-            { "pX", restartInfo.x },
-            { "pY", 0 },
-            { "pZ", restartInfo.z },
+            { "pX", position.x },
+            { "pY", position.y },
+            { "pZ", position.z },
             { "vX", 0 },
             { "vY", 0 },
             { "vZ", 0 },
             { "rX", 0 },
-            { "rY", 0 },
+            { "rY", rotation.y },
         };
 
         MultiplayerManager.Instance.SendMessage(message, data);
     }
 
-    public void OnPlayerRestartHandler(string json)
+    public void OnPlayerRestartHandler(int spawnIndex)
     {
         IEnumerator waiting()
         {
@@ -95,10 +110,13 @@ public class PlayerController : MonoBehaviour
 
         StartCoroutine(waiting());
 
-        RestartInfo restartInfo = JsonUtility.FromJson<RestartInfo>(json);
-        playerCharacter.transform.position = new Vector3(restartInfo.x, 0, restartInfo.z);
+        MultiplayerManager.Instance.spawnPoints.GetPoint(spawnIndex, out Vector3 position, out Vector3 rotation);
+        playerCharacter.transform.position = position;
+        rotation.x = 0;
+        rotation.z = 0;
+        playerCharacter.transform.eulerAngles = rotation;
         playerCharacter.SetInput(0, 0, 0);
-        SendMoveForRestart(restartInfo);
+        SendMoveForRestart(position, rotation);
     }
 }
 
@@ -112,11 +130,4 @@ public struct ShootInfo
     public float dX;
     public float dY;
     public float dZ;
-}
-
-[Serializable]
-public struct RestartInfo
-{
-    public float x;
-    public float z;
 }

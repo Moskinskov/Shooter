@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Colyseus;
+using DefaultNamespace;
 using generated;
 using UI;
 using UnityEngine;
@@ -7,6 +8,7 @@ using UnityEngine;
 public class MultiplayerManager : ColyseusManager<MultiplayerManager>
 {
     private ColyseusRoom<State> room;
+    [field: SerializeField] public SpawnPoints spawnPoints { get; private set; }
     [SerializeField] private PlayerCharacter playerPrefab;
     [SerializeField] private EnemyController enemyPrefab;
     [field: SerializeField] public LossCounterUi lossCounterUi { get; set; }
@@ -26,10 +28,17 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
 
     private async void Connect()
     {
+        spawnPoints.GetPoint(Random.Range(0, spawnPoints.Length), out Vector3 spawnPosition, out Vector3 spawnRotation);
+
         Dictionary<string, object> joinParams = new Dictionary<string, object>()
         {
             { "speed", playerPrefab.Speed },
             { "hp", playerPrefab.MaxHealth },
+            { "points", spawnPoints.Length },
+            { "pX", spawnPosition.x },
+            { "pY", spawnPosition.y },
+            { "pZ", spawnPosition.z },
+            { "rY", spawnRotation.y },
         };
 
         string roomName = R.ServerCredits.RoomName;
@@ -75,14 +84,14 @@ public class MultiplayerManager : ColyseusManager<MultiplayerManager>
     private void CreatePlayer(string key, Player player)
     {
         Vector3 position = new Vector3(player.pX, player.pY, player.pZ);
-        Quaternion rotation = Quaternion.identity;
+        Quaternion rotation = Quaternion.Euler(0, player.rY, 0);
 
         if (IsMyPlayer(key))
         {
             string message = R.FromServerEvents.Restart;
             PlayerCharacter newPlayer = Instantiate(playerPrefab, position, rotation);
             player.OnChange += newPlayer.OnChange;
-            room.OnMessage<string>(message, newPlayer.GetComponent<PlayerController>().OnPlayerRestartHandler);
+            room.OnMessage<int>(message, newPlayer.GetComponent<PlayerController>().OnPlayerRestartHandler);
         }
         else
         {
