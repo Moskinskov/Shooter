@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5342728340526425907}
   - component: {fileID: 4103889132062694616}
   - component: {fileID: 8723575132076632498}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Sphere
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -116,7 +116,7 @@ GameObject:
   - component: {fileID: 7481740038902456508}
   - component: {fileID: 1881464420494392358}
   - component: {fileID: 5574793279165231396}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Bullet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -190,7 +190,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5089489954319267642}
   - component: {fileID: 2206522971299238928}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Trail
   m_TagString: Untagged
   m_Icon: {fileID: 0}

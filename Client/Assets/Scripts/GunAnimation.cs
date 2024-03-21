@@ -4,7 +4,7 @@ public class GunAnimation : MonoBehaviour
 {
     [SerializeField] private Gun.Gun playerGun;
     [SerializeField] private Animator animator;
-    private const string shootTriggerKey = "TryShoot";
+    private const string shootTriggerKey = "Shoot";
 
     private void Start()
     {
